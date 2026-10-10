@@ -1,3 +1,5 @@
+import db from "./db.js";
+
 const express = require("express");
 const app = express();
 
@@ -11,8 +13,10 @@ app.get("/api/students", (req, res) => {
   const sql = "SELECT * FROM students";
   db.query(sql, (err, result) => {
     if (err) {
-      console.log(err);
-      res.status(500).send("Error retrieving students from the database");
+      console.error(err);
+      return res.status(500).json({
+        message: "Failed to  retrieve students",
+      });
     }
 
     res.json(result);
