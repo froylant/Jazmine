@@ -4,8 +4,13 @@ import "./App.css";
 function App() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({
+    name: "",
+    course: "",
+    age: "",
+  });
 
-  useEffect(() => {
+  const loadStudents = () => {
     fetch("/api/students")
       .then((response) => {
         if (!response.ok) {
@@ -21,36 +26,130 @@ function App() {
         console.error("Error fetching students:", error);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadStudents();
   }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    fetch("/api/students", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to add student");
+        }
+        return data;
+      })
+      .then(() => {
+        setForm({ name: "", course: "", age: "" });
+        loadStudents();
+      })
+      .catch((error) => {
+        console.error("Error adding student:", error);
+      });
+  };
 
   return (
     <main className="app-container">
-      <h1>Student Records</h1>
+      <section className="student-panel">
+        <h1>Student Management</h1>
 
-      {loading ? (
-        <p>Loading students...</p>
-      ) : students.length === 0 ? (
-        <p>No student records found.</p>
-      ) : (
-        <table className="student-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Course</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((student) => (
-              <tr key={student.id ?? `${student.name}-${student.course}`}>
-                <td>{student.id}</td>
-                <td>{student.name}</td>
-                <td>{student.course}</td>
+        <form className="student-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="name">Student Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Enter student name"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="course">Course</label>
+            <input
+              id="course"
+              name="course"
+              type="text"
+              value={form.course}
+              onChange={handleChange}
+              placeholder="Enter course"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="age">Age</label>
+            <input
+              id="age"
+              name="age"
+              type="number"
+              value={form.age}
+              onChange={handleChange}
+              placeholder="Enter age"
+            />
+          </div>
+
+          <button type="submit" className="add-button">
+            Add Student
+          </button>
+        </form>
+      </section>
+
+      <section className="student-list-section">
+        <h2>Student List</h2>
+
+        {loading ? (
+          <p>Loading students...</p>
+        ) : students.length === 0 ? (
+          <p>No student records found.</p>
+        ) : (
+          <table className="student-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Age</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {students.map((student) => (
+                <tr key={student.id ?? `${student.name}-${student.course}`}>
+                  <td>{student.id}</td>
+                  <td>{student.name}</td>
+                  <td>{student.course}</td>
+                  <td>{student.age}</td>
+                  <td className="action-cell">
+                    <button type="button" className="edit-button">
+                      Edit
+                    </button>
+                    <button type="button" className="delete-button">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </main>
   );
 }
