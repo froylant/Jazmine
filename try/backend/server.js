@@ -1,5 +1,4 @@
-import db from "./db.js";
-
+const db = require("./db.js");
 const express = require("express");
 const app = express();
 
