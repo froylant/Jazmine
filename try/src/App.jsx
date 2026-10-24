@@ -4,6 +4,7 @@ import "./App.css";
 function App() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     name: "",
     course: "",
@@ -40,8 +41,11 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    fetch("/api/students", {
-      method: "POST",
+    const method = editingId ? "PUT" : "POST";
+    const url = editingId ? `/api/students/${editingId}` : "/api/students";
+
+    fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json",
       },
@@ -50,17 +54,51 @@ function App() {
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.message || "Failed to add student");
+          throw new Error(data.message || "Failed to save student");
         }
         return data;
       })
       .then(() => {
         setForm({ name: "", course: "", age: "" });
+        setEditingId(null);
         loadStudents();
       })
       .catch((error) => {
-        console.error("Error adding student:", error);
+        console.error("Error saving student:", error);
       });
+  };
+
+  const handleEdit = (student) => {
+    setEditingId(student.id);
+    setForm({
+      name: student.name,
+      course: student.course,
+      age: student.age,
+    });
+  };
+
+  const handleDelete = (id) => {
+    fetch(`/api/students/${id}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to delete student");
+        }
+        return data;
+      })
+      .then(() => {
+        loadStudents();
+      })
+      .catch((error) => {
+        console.error("Error deleting student:", error);
+      });
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({ name: "", course: "", age: "" });
   };
 
   return (
@@ -106,8 +144,14 @@ function App() {
           </div>
 
           <button type="submit" className="add-button">
-            Add Student
+            {editingId ? "Update Student" : "Add Student"}
           </button>
+
+          {editingId && (
+            <button type="button" className="cancel-button" onClick={resetForm}>
+              Cancel
+            </button>
+          )}
         </form>
       </section>
 
@@ -137,10 +181,18 @@ function App() {
                   <td>{student.course}</td>
                   <td>{student.age}</td>
                   <td className="action-cell">
-                    <button type="button" className="edit-button">
+                    <button
+                      type="button"
+                      className="edit-button"
+                      onClick={() => handleEdit(student)}
+                    >
                       Edit
                     </button>
-                    <button type="button" className="delete-button">
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={() => handleDelete(student.id)}
+                    >
                       Delete
                     </button>
                   </td>

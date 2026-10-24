@@ -53,7 +53,8 @@ body {
   font-size: 14px;
 }
 
-.add-button {
+.add-button,
+.cancel-button {
   background: #2563eb;
   color: white;
   border: none;
@@ -65,8 +66,17 @@ body {
   height: 42px;
 }
 
-.add-button:hover {
+.add-button:hover,
+.cancel-button:hover {
   background: #1d4ed8;
+}
+
+.cancel-button {
+  background: #6b7280;
+}
+
+.cancel-button:hover {
+  background: #4b5563;
 }
 
 .student-table {
