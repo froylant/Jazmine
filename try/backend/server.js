@@ -8,6 +8,23 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+function validateStudent(body) {
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  const course = typeof body?.course === "string" ? body.course.trim() : "";
+  const age = Number(body?.age);
+
+  if (!name || !course || !Number.isInteger(age) || age <= 0) {
+    return null;
+  }
+
+  return { name, course, age };
+}
+
+function parseStudentId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 app.get("/", (req, res) => {
   res.send("student api is running");
 });
@@ -27,14 +44,15 @@ app.get("/api/students", (req, res) => {
 });
 
 app.post("/api/students", (req, res) => {
-  const { name, course, age } = req.body;
+  const student = validateStudent(req.body);
 
-  if (!name || !course || age === undefined || age === null || age === "") {
+  if (!student) {
     return res.status(400).json({
-      message: "Name, course, and age are required",
+      message: "Name, course, and a positive whole-number age are required",
     });
   }
 
+  const { name, course, age } = student;
   const findNextIdSql =
     "SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM students";
   db.query(findNextIdSql, (err, rows) => {
@@ -67,15 +85,22 @@ app.post("/api/students", (req, res) => {
 });
 
 app.put("/api/students/:id", (req, res) => {
-  const { id } = req.params;
-  const { name, course, age } = req.body;
+  const id = parseStudentId(req.params.id);
+  const student = validateStudent(req.body);
 
-  if (!name || !course || age === undefined || age === null || age === "") {
+  if (id === null) {
+    return res
+      .status(400)
+      .json({ message: "Student id must be a positive integer" });
+  }
+
+  if (!student) {
     return res.status(400).json({
-      message: "Name, course, and age are required",
+      message: "Name, course, and a positive whole-number age are required",
     });
   }
 
+  const { name, course, age } = student;
   const sql = "UPDATE students SET name = ?, course = ?, age = ? WHERE id = ?";
   db.query(sql, [name, course, age, id], (err, result) => {
     if (err) {
@@ -86,13 +111,32 @@ app.put("/api/students/:id", (req, res) => {
     }
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Student not found",
+      const findSql = "SELECT id FROM students WHERE id = ?";
+      return db.query(findSql, [id], (findErr, rows) => {
+        if (findErr) {
+          console.error(findErr);
+          return res.status(500).json({
+            message: "Failed to verify student update",
+          });
+        }
+
+        if (rows.length === 0) {
+          return res.status(404).json({
+            message: "Student not found",
+          });
+        }
+
+        res.json({
+          id,
+          name,
+          course,
+          age,
+        });
       });
     }
 
     res.json({
-      id: Number(id),
+      id,
       name,
       course,
       age,
@@ -101,7 +145,13 @@ app.put("/api/students/:id", (req, res) => {
 });
 
 app.delete("/api/students/:id", (req, res) => {
-  const { id } = req.params;
+  const id = parseStudentId(req.params.id);
+
+  if (id === null) {
+    return res
+      .status(400)
+      .json({ message: "Student id must be a positive integer" });
+  }
 
   const sql = "DELETE FROM students WHERE id = ?";
   db.query(sql, [id], (err, result) => {
